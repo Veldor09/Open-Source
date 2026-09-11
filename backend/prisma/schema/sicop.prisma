@@ -1,0 +1,153 @@
+// Modelos del módulo SICOP (Contratación Pública). Corresponde a
+// backend/src/modules/sicop/. Ver ese módulo y su README para más contexto.
+
+/// Cartel/procedimiento de contratación pública de SICOP. Estructura
+/// verificada contra DetalleCarteles.csv real (descarga de agosto 2026 vía
+/// observatoriocomprapublica.go.cr) — NRO_SICOP es la clave natural usada
+/// por todos los demás reportes de SICOP para referenciar el procedimiento.
+model SicopProcedimiento {
+  nroSicop               String    @id
+  cedulaInstitucion      String
+  numeroProcedimiento    String
+  tipoProcedimiento      String
+  modalidadProcedimiento String
+  descripcion            String
+  estado                 String
+  clasificacionObjeto    String?
+  montoEstimado          Float?
+  fechaPublicacion       DateTime
+  fechaApertura          DateTime?
+  fechaModificacion      DateTime?
+  codigoExcepcion        String?
+  descripcionExcepcion   String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([tipoProcedimiento])
+  @@index([modalidadProcedimiento])
+  @@index([estado])
+  @@index([clasificacionObjeto])
+  @@index([cedulaInstitucion])
+  @@index([fechaPublicacion])
+}
+
+/// Línea adjudicada dentro de un procedimiento de SICOP. Estructura
+/// verificada contra ProcedimientoAdjudicacion.csv real. MONEDA_ADJUDICADA +
+/// MONTO_ADJU_LINEA es el par autoritativo (moneda real en la que se
+/// adjudicó); los campos *Crc/*Usd son el equivalente que la propia SICOP
+/// publica en ambas monedas — se guardan tal cual, nunca se recalculan
+/// aquí, y el frontend los rotula como "equivalente publicado por SICOP".
+/// No se persisten CEDULA_REPRESENTANTE ni REPRESENTANTE (nombre de persona
+/// física): igual que con OIJ/TSE, este observatorio no guarda identidad de
+/// personas cuando no es necesaria para el propósito de transparencia de
+/// gasto público (ver README del módulo).
+model SicopLineaAdjudicada {
+  id                       String    @id @default(cuid())
+  nroSicop                 String
+  linea                    Int
+  anio                     Int
+  cedulaInstitucion        String
+  institucion              String
+  numeroProcedimiento      String
+  tipoProcedimiento        String
+  modalidadProcedimiento   String
+  descripcionProcedimiento String
+  descripcionBienServicio  String
+  cantidad                 Float
+  unidadMedida             String
+  montoUnitario            Float
+  monedaPrecioEstimado     String
+  monedaAdjudicada         String
+  montoLineaAdjudicada     Float
+  montoLineaAdjudicadaCrc  Float?
+  montoLineaAdjudicadaUsd  Float?
+  fechaAdjudicacionFirme   DateTime?
+  fechaSolicitudContrato   DateTime?
+  cedulaProveedor          String
+  nombreProveedor          String
+  perfilProveedor          String?
+  objetoGasto              String?
+  productoId               String?
+  createdAt                DateTime  @default(now())
+
+  @@unique([nroSicop, linea])
+  @@index([cedulaInstitucion])
+  @@index([cedulaProveedor])
+  @@index([anio])
+  @@index([fechaAdjudicacionFirme])
+  @@index([monedaAdjudicada])
+  @@index([tipoProcedimiento])
+  @@index([modalidadProcedimiento])
+}
+
+/// Institución registrada en SICOP (tabla de dimensión). Estructura
+/// verificada contra InstitucionesRegistradas.csv real.
+model SicopInstitucion {
+  cedula            String    @id
+  nombre            String
+  zonaGeografica    String?
+  fechaIngreso      DateTime?
+  fechaModificacion DateTime?
+  updatedAt         DateTime  @updatedAt
+}
+
+/// Proveedor registrado en SICOP (tabla de dimensión). Estructura
+/// verificada contra Proveedores.csv real. No se importan
+/// FECHA_CONSTITUCION/FECHA_EXPIRACION (formato ambiguo DDMMYYYY y "No
+/// aplica" para personas físicas; bajo valor para los indicadores de este
+/// observatorio).
+model SicopProveedor {
+  cedula            String    @id
+  nombre            String
+  tipoProveedor     String?
+  tamanoProveedor   String?
+  zonaGeografica    String?
+  fechaRegistro     DateTime?
+  fechaModificacion DateTime?
+  updatedAt         DateTime  @updatedAt
+}
+
+/// Una oferta presentada a un procedimiento de SICOP (Ofertas.csv).
+/// IMPORTANTE — verificado con datos reales de agosto 2026: esta tabla NO
+/// es "1 fila = 1 competidor". Un mismo NRO_SICOP puede tener miles de
+/// filas con apenas un puñado de CEDULA_PROVEEDOR distintas (un caso real:
+/// 1525 filas, 21 proveedores — el mismo proveedor reenvía muchas "ofertas"
+/// separadas por minutos, probablemente una por línea/ítem ofertado). El
+/// indicador de competencia real es COUNT(DISTINCT cedulaProveedor) por
+/// NRO_SICOP, nunca COUNT(*) ni COUNT(DISTINCT nroOferta) — ver
+/// sicop.service.ts#getCompetition y el README del módulo.
+/// NRO_OFERTA sí es único a nivel de fila (verificado, 0 duplicados en el
+/// archivo completo) y se usa como llave natural.
+model SicopOferta {
+  nroOferta         String   @id
+  nroSicop          String
+  cedulaProveedor   String
+  fechaPresentacion DateTime
+  tipoOferta        String
+  idConsorcio       String?
+  createdAt         DateTime @default(now())
+
+  @@index([nroSicop])
+  @@index([cedulaProveedor])
+  @@index([fechaPresentacion])
+}
+
+/// Registro de qué período mensual (yyyyMM) del ZIP de SICOP se importó por
+/// última vez, para idempotencia (mismo patrón que OijImport). A diferencia
+/// de OIJ, las filas de SicopProcedimiento/SicopLineaAdjudicada se
+/// actualizan por upsert (clave natural NRO_SICOP), no se borran por
+/// período: un mismo procedimiento puede reaparecer actualizado en varios
+/// ZIPs mensuales. SicopOferta es distinto: cada fila es un evento
+/// inmutable con su propia llave (NRO_OFERTA), así que se inserta una sola
+/// vez (createMany + skipDuplicates), nunca se actualiza.
+model SicopImport {
+  id                     String   @id @default(cuid())
+  periodo                String   @unique
+  checksum               String
+  procedimientosCount    Int
+  lineasAdjudicadasCount Int
+  institucionesCount     Int
+  proveedoresCount       Int
+  ofertasCount           Int      @default(0)
+  importedAt             DateTime @default(now())
+}

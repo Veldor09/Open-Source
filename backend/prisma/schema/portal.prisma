@@ -1,0 +1,17 @@
+// Modelos del módulo Portal Nacional / PRONAE. Corresponde a
+// backend/src/modules/portal-datos/. Ver ese módulo y su README para más contexto.
+
+/// Personas beneficiarias del PRONAE por modalidad y año. Estructura
+/// verificada contra el XLSX real del Portal Nacional (hoja "C 1.4"): una
+/// sola hoja, 7 modalidades x 4 años (2021-2024). La fila "Total" de la
+/// fuente no se persiste — se recalcula por agregación para evitar que se
+/// desincronice del detalle por modalidad.
+model PronaeBeneficiario {
+  id        String @id @default(cuid())
+  modalidad String
+  anio      Int
+  cantidad  Int
+
+  @@unique([modalidad, anio])
+  @@index([anio])
+}

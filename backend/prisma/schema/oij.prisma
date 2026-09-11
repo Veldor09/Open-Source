@@ -1,0 +1,41 @@
+// Modelos del módulo OIJ (Seguridad y Justicia). Corresponde a
+// backend/src/modules/oij/. Ver ese módulo y su README para más contexto.
+
+/// Un incidente policial reportado por el OIJ. Estructura verificada contra
+/// el recurso CKAN real (CSV + XSD del recurso XML) del dataset
+/// "estadisticas-policiales": no existen campos Hora ni Sexo/Genero en la
+/// fuente actual, y Edad es una categoría (no un número).
+model OijIncidente {
+  id           String   @id @default(cuid())
+  delito       String
+  subDelito    String
+  fecha        DateTime @db.Date
+  anio         Int
+  victima      String
+  subVictima   String
+  edad         String
+  nacionalidad String
+  provincia    String
+  canton       String
+  distrito     String
+  createdAt    DateTime @default(now())
+
+  @@index([fecha])
+  @@index([anio])
+  @@index([delito])
+  @@index([provincia])
+  @@index([canton])
+}
+
+/// Registro de qué recurso CKAN (por año) se importó por última vez, para
+/// que el importador sea idempotente sin depender de un ID único por fila
+/// (la fuente no provee uno).
+model OijImport {
+  id          String   @id @default(cuid())
+  anio        Int      @unique
+  resourceId  String
+  resourceUrl String
+  checksum    String
+  rowCount    Int
+  importedAt  DateTime @default(now())
+}

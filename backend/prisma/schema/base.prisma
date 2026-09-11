@@ -1,0 +1,42 @@
+// Generador, datasource y modelo compartido de procedencia. Este archivo NO
+// pertenece a ninguna fuente en particular — no lo edites al agregar tu
+// fuente, solo agrega/edita tu propio archivo (oij.prisma, portal.prisma,
+// tse.prisma o sicop.prisma) en esta misma carpeta.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum SourceStatus {
+  AVAILABLE
+  STALE
+  UNAVAILABLE
+  NOT_CONFIGURED
+  IMPORTING
+  ERROR
+}
+
+/// Procedencia y estado de cada una de las 4 fuentes del observatorio.
+/// Los datos propios de cada fuente (OIJ, TSE, Portal, SICOP) viven en sus
+/// propios modelos; este modelo solo guarda de dónde vino el dato y cuándo.
+model DataSourceStatus {
+  id              String       @id @default(cuid())
+  sourceKey       String       @unique
+  institution     String
+  officialUrl     String
+  resourceUrl     String?
+  resourceId      String?
+  resourceFormat  String?
+  sourceUpdatedAt DateTime?
+  retrievedAt     DateTime?
+  status          SourceStatus @default(NOT_CONFIGURED)
+  errorMessage    String?
+  checksum        String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}

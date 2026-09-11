@@ -1,0 +1,20 @@
+// Modelos del módulo TSE (Información Electoral). Corresponde a
+// backend/src/modules/tse/. Ver ese módulo y su README para más contexto.
+
+/// Agregados del Padrón Electoral del TSE por corte mensual. Deliberadamente
+/// NO existe ningún modelo con cédula, nombre o apellidos: el importador
+/// lee PADRON_COMPLETO.txt línea por línea (streaming, ~430 MB
+/// descomprimidos) y descarta esos campos de inmediato, quedándose solo con
+/// el código electoral para agregar por distrito. Ver README del módulo.
+model TsePadronSnapshot {
+  id                String   @id @default(cuid())
+  fechaSnapshot     DateTime @db.Date
+  provincia         String
+  canton            String
+  distrito          String
+  cantidadElectores Int
+
+  @@unique([fechaSnapshot, provincia, canton, distrito])
+  @@index([fechaSnapshot])
+  @@index([provincia])
+}

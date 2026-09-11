@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Next.js
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/next-env.d.ts
+
+# NestJS / Prisma generated client (regenerado con `npm install` / `prisma generate`)
+backend/dist/
+backend/src/generated/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Claude Code (estado local de la herramienta, no del proyecto)
+.claude/
+backend/.claude/
+backend/.agents/
+backend/.windsurf/
+backend/skills-lock.json
+
+# Prisma (bases de datos locales tipo SQLite, si se usaran en pruebas)
+backend/prisma/*.db
+
+# Coverage / tests
+coverage/
